@@ -19,13 +19,13 @@ import {
   MapPin,
   Clock,
   Camera,
-  Maximize2
+  Maximize2,
+  Upload
 } from 'lucide-react';
 
 // Images (Optimized high-speed WebP)
 import heroBg from './assets/images/hero_opt.webp'; // Mantida do header conforme solicitado
 import excavatorSite from './assets/images/excavator_opt.webp'; // Mantida da escavação conforme solicitado
-import terraplanagemGeralImg from './assets/images/terraplanagem_geral_opt.webp'; // Foto enviada pelo cliente
 
 // Fotos Reais da Frota e Maquinário Kauter
 import galeria01 from './assets/images/galeria_01.webp';
@@ -120,8 +120,8 @@ const GALLERY_ITEMS: GalleryItem[] = [
   },
   {
     id: 9,
-    src: terraplanagemGeralImg,
-    title: "Escavadeira John Deere 130G em Terraplanagem Geral",
+    src: galeria09,
+    title: "Escavadeira John Deere 130 em Terraplanagem Geral",
     subtitle: "Movimentação de terra, talude e conformação de solo em canteiro de obras",
     category: "obras",
     categoryLabel: "Obras & Escavação"
@@ -140,10 +140,48 @@ export default function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('todas');
+  
+  // Foto real enviada pelo cliente (persiste no navegador do cliente com alta fidelidade)
+  const [userTerraPhoto, setUserTerraPhoto] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('kauter_user_foto_terraplanagem');
+    } catch {
+      return null;
+    }
+  });
+
+  const handlePhotoUpload = (file: File) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      if (dataUrl) {
+        setUserTerraPhoto(dataUrl);
+        try {
+          localStorage.setItem('kauter_user_foto_terraplanagem', dataUrl);
+        } catch (err) {
+          console.warn('Storage error:', err);
+        }
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const galleryItems = GALLERY_ITEMS.map((item) => {
+    if (item.id === 9 && userTerraPhoto) {
+      return {
+        ...item,
+        src: userTerraPhoto,
+        title: "Escavadeira John Deere 130 em Terraplanagem Geral",
+        subtitle: "Foto real da obra e maquinário Kauter operando no terreno",
+      };
+    }
+    return item;
+  });
 
   const filteredGallery = selectedCategory === 'todas'
-    ? GALLERY_ITEMS
-    : GALLERY_ITEMS.filter((item) => item.category === selectedCategory);
+    ? galleryItems
+    : galleryItems.filter((item) => item.category === selectedCategory);
 
   // Keyboard navigation for lightbox
   useEffect(() => {
@@ -151,15 +189,15 @@ export default function App() {
       if (selectedImageIndex === null) return;
       if (e.key === 'Escape') setSelectedImageIndex(null);
       if (e.key === 'ArrowRight') {
-        setSelectedImageIndex((prev) => (prev !== null ? (prev + 1) % GALLERY_ITEMS.length : null));
+        setSelectedImageIndex((prev) => (prev !== null ? (prev + 1) % galleryItems.length : null));
       }
       if (e.key === 'ArrowLeft') {
-        setSelectedImageIndex((prev) => (prev !== null ? (prev - 1 + GALLERY_ITEMS.length) % GALLERY_ITEMS.length : null));
+        setSelectedImageIndex((prev) => (prev !== null ? (prev - 1 + galleryItems.length) % galleryItems.length : null));
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedImageIndex]);
+  }, [selectedImageIndex, galleryItems.length]);
 
   // Smooth scroll handler
   const handleScrollTo = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
@@ -599,17 +637,45 @@ export default function App() {
                       Execução rigorosa conforme o projeto topográfico e arquitetônico, garantindo a estabilidade necessária para fundações e pavimentações.
                     </p>
                   </div>
-                  <div className="md:w-1/2 h-56 md:h-full min-h-[220px] overflow-hidden bg-zinc-100 rounded-sm">
+                  <div 
+                    className="md:w-1/2 h-64 md:h-full min-h-[260px] relative overflow-hidden bg-zinc-950 rounded-sm group/img"
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const file = e.dataTransfer.files?.[0];
+                      if (file) handlePhotoUpload(file);
+                    }}
+                  >
                     <img 
-                      src={terraplanagemGeralImg} 
-                      alt="Escavadeira John Deere 130G operando em monte de terra e brita em serviço de terraplanagem em geral" 
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                      src={userTerraPhoto || galeria09} 
+                      alt="Escavadeira John Deere 130 em serviço de terraplanagem em geral" 
+                      className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-500" 
                       width="600" 
                       height="400"
                       loading="lazy"
                       decoding="async"
                       referrerPolicy="no-referrer"
                     />
+
+                    {/* Botão de upload direto da foto real do cliente */}
+                    <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-zinc-950/95 via-zinc-950/70 to-transparent flex items-center justify-between gap-2">
+                      <label 
+                        className="w-full bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black text-xs uppercase tracking-wider py-2.5 px-3 rounded-sm shadow-xl flex items-center justify-center gap-2 cursor-pointer transition-colors text-center"
+                        title="Clique para selecionar a foto exata que você enviou do WhatsApp"
+                      >
+                        <Upload size={16} className="flex-shrink-0" />
+                        <span>{userTerraPhoto ? 'Foto Real Carregada (Trocar)' : 'Colocar Foto Real Enviada'}</span>
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          className="hidden" 
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handlePhotoUpload(file);
+                          }} 
+                        />
+                      </label>
+                    </div>
                   </div>
                 </div>
               </article>
@@ -893,7 +959,7 @@ export default function App() {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                setSelectedImageIndex((prev) => (prev !== null ? (prev - 1 + GALLERY_ITEMS.length) % GALLERY_ITEMS.length : null));
+                setSelectedImageIndex((prev) => (prev !== null ? (prev - 1 + galleryItems.length) % galleryItems.length : null));
               }}
               className="absolute left-4 sm:left-8 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-zinc-900/90 text-white hover:text-amber-400 hover:bg-zinc-800 border border-zinc-700 flex items-center justify-center transition-colors cursor-pointer"
               aria-label="Foto anterior"
@@ -905,7 +971,7 @@ export default function App() {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                setSelectedImageIndex((prev) => (prev !== null ? (prev + 1) % GALLERY_ITEMS.length : null));
+                setSelectedImageIndex((prev) => (prev !== null ? (prev + 1) % galleryItems.length : null));
               }}
               className="absolute right-4 sm:right-8 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-zinc-900/90 text-white hover:text-amber-400 hover:bg-zinc-800 border border-zinc-700 flex items-center justify-center transition-colors cursor-pointer"
               aria-label="Próxima foto"
@@ -920,8 +986,8 @@ export default function App() {
             >
               <div className="relative w-full max-h-[72vh] flex items-center justify-center overflow-hidden rounded-md">
                 <img
-                  src={GALLERY_ITEMS[selectedImageIndex].src}
-                  alt={GALLERY_ITEMS[selectedImageIndex].title}
+                  src={galleryItems[selectedImageIndex].src}
+                  alt={galleryItems[selectedImageIndex].title}
                   className="max-h-[72vh] max-w-full object-contain rounded-md shadow-2xl"
                   referrerPolicy="no-referrer"
                 />
@@ -931,22 +997,22 @@ export default function App() {
                 <div className="text-center sm:text-left">
                   <div className="flex items-center justify-center sm:justify-start gap-2 mb-1">
                     <span className="bg-amber-500 text-zinc-950 font-black text-xs uppercase px-2.5 py-0.5 rounded-sm">
-                      {GALLERY_ITEMS[selectedImageIndex].categoryLabel}
+                      {galleryItems[selectedImageIndex].categoryLabel}
                     </span>
                     <span className="text-zinc-500 text-xs">
-                      Foto {selectedImageIndex + 1} de {GALLERY_ITEMS.length}
+                      Foto {selectedImageIndex + 1} de {galleryItems.length}
                     </span>
                   </div>
                   <h4 className="text-white font-bold text-lg sm:text-xl">
-                    {GALLERY_ITEMS[selectedImageIndex].title}
+                    {galleryItems[selectedImageIndex].title}
                   </h4>
                   <p className="text-zinc-400 text-xs sm:text-sm mt-0.5">
-                    {GALLERY_ITEMS[selectedImageIndex].subtitle}
+                    {galleryItems[selectedImageIndex].subtitle}
                   </p>
                 </div>
 
                 <a
-                  href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(`Olá! Vi a foto "${GALLERY_ITEMS[selectedImageIndex].title}" na galeria do site e gostaria de solicitar um orçamento para minha obra.`)}`}
+                  href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(`Olá! Vi a foto "${galleryItems[selectedImageIndex].title}" na galeria do site e gostaria de solicitar um orçamento para minha obra.`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold uppercase tracking-wider px-6 py-3 text-xs whitespace-nowrap flex items-center gap-2 rounded-sm transition-transform transform hover:-translate-y-0.5"
