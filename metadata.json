@@ -1,0 +1,8 @@
+{
+  "name": "Kauter Terraplanagem",
+  "description": "Escavação, demolição, aterro, limpeza de terrenos, terraplanagem em geral e venda de saibro, pedrisco e terra.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
